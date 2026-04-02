@@ -1,0 +1,85 @@
+DNA PATTERN MATCHER - QUICK START
+==================================
+
+WHAT IS THIS?
+=============
+A DNA sequence pattern matcher using Finite Automata (DFA).
+For Theory of Automata course project.
+
+FEATURES:
+- Pattern matching with O(n) time complexity
+- DFA state visualization
+- FASTA file support
+- AI pattern extraction (optional, with Google Gemini)
+- Real-time statistics and charts
+
+HOW TO RUN:
+===========
+
+1. Activate virtual environment:
+   source .venv/bin/activate
+
+2. Run the app:
+   streamlit run app_web.py
+
+3. Opens at: http://localhost:8501
+
+QUICK TEST (No API Key Needed):
+===============================
+
+Pattern: ATCG
+Genome:  ATCGATCGATCGATCGATCGATCGATCGATCG
+
+Result: 8 matches found ✓
+
+TO USE AI FEATURE (Optional):
+=============================
+
+1. Get API key: https://aistudio.google.com/app/apikey
+2. Set: export GOOGLE_API_KEY="your-key"
+3. Run: streamlit run app_web.py
+4. Type: "find TATA box" in AI field
+5. Pattern auto-extracts!
+
+FILES:
+======
+
+Main Application:
+- main.py                  (Launcher)
+- app_web.py               (Web app)
+- simulator_ui.py          (Desktop app)
+
+Core Algorithm:
+- dfa.py                   (DFA construction)
+- matcher.py               (Pattern matching)
+- genome_loader.py         (FASTA support)
+- ai_insights.py           (Gemini AI)
+
+Configuration:
+- requirements.txt         (Dependencies)
+- README.md                (Project info)
+- API_KEY_SETUP.txt        (API setup)
+- QUICK_START_CARD.txt     (Quick ref)
+
+WHAT YOU CAN DO:
+================
+
+✓ Enter DNA pattern (A, T, C, G)
+✓ Upload FASTA genome file
+✓ Or paste genome sequence
+✓ View DFA state diagram
+✓ See match positions highlighted
+✓ View statistics and charts
+✓ Use AI to extract patterns from text
+
+TECHNOLOGY STACK:
+=================
+
+Python 3.13
+Streamlit (web interface)
+Plotly (visualizations)
+Google Gemini AI (pattern extraction)
+BioPython (FASTA support)
+
+That's it! Enjoy! 🧬
+

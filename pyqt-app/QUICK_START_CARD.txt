@@ -1,0 +1,80 @@
+═══════════════════════════════════════════════════════════════
+  QUICK START CARD - DNA PATTERN MATCHER
+═══════════════════════════════════════════════════════════════
+
+YOUR MOCKUP UI IS NOW LIVE! ✅
+
+═══════════════════════════════════════════════════════════════
+STEP 1: GET API KEY (Optional but Recommended)
+═══════════════════════════════════════════════════════════════
+
+Go to: https://aistudio.google.com/app/apikey
+Sign in → Create API Key → Copy key
+
+═══════════════════════════════════════════════════════════════
+STEP 2: SET ENVIRONMENT VARIABLE
+═══════════════════════════════════════════════════════════════
+
+Mac/Linux (Permanent):
+  nano ~/.zshrc
+  Add: export GOOGLE_API_KEY="your-key-here"
+  Save & close
+
+Mac/Linux (This session):
+  export GOOGLE_API_KEY="your-key-here"
+
+Windows:
+  setx GOOGLE_API_KEY "your-key-here"
+
+═══════════════════════════════════════════════════════════════
+STEP 3: RUN THE APP
+═══════════════════════════════════════════════════════════════
+
+source .venv/bin/activate
+streamlit run app_web.py
+
+Opens: http://localhost:8501
+
+═══════════════════════════════════════════════════════════════
+STEP 4: USE THE APP
+═══════════════════════════════════════════════════════════════
+
+LEFT PANEL:
+  ✓ Type "find TATA box" (AI extracts automatically!)
+  OR
+  ✓ Enter pattern manually: ATCG
+  ✓ Paste/upload genome
+  ✓ Click "RUN MATCHER"
+
+CENTER PANEL:
+  ✓ See DFA states count
+  ✓ View transition table
+  ✓ Understand algorithm
+
+RIGHT PANEL:
+  ✓ Colored genome (matches in GREEN)
+  ✓ Match position chart
+  ✓ Statistics (count, density)
+
+═══════════════════════════════════════════════════════════════
+TEST IT NOW (No API Key Needed)
+═══════════════════════════════════════════════════════════════
+
+Pattern:  ATCG
+Genome:   ATCGATCGATCGATCGATCGATCGATCGATCG
+
+Result: 8 matches found ✓
+
+═══════════════════════════════════════════════════════════════
+THAT'S IT!
+═══════════════════════════════════════════════════════════════
+
+Your mockup UI is implemented.
+API key setup is documented.
+App is ready for your professor.
+
+Command: streamlit run app_web.py
+
+Enjoy! 🎉
+═══════════════════════════════════════════════════════════════
+
