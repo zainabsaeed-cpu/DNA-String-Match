@@ -633,11 +633,11 @@ class GeneFlowApp(QMainWindow):
         mapping = {
             "matcher": QStyle.StandardPixmap.SP_FileDialogContentsView,
             "diagram": QStyle.StandardPixmap.SP_ArrowRight,
-            "results": QStyle.StandardPixmap.SP_DialogApplyButton,
+            "results": QStyle.StandardPixmap.SP_FileDialogListView,
             "data": QStyle.StandardPixmap.SP_DirIcon,
             "export": QStyle.StandardPixmap.SP_DialogSaveButton,
             "history": QStyle.StandardPixmap.SP_FileDialogDetailedView,
-            "config": QStyle.StandardPixmap.SP_FileDialogInfoView,
+            "config": QStyle.StandardPixmap.SP_BrowserReload,
             "ai": QStyle.StandardPixmap.SP_MessageBoxInformation,
         }
         return style.standardIcon(mapping.get(kind, QStyle.StandardPixmap.SP_FileIcon))
