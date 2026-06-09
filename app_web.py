@@ -17,6 +17,7 @@ except ImportError:
 
 from dfa import ALPHABET, get_transition_table
 from matcher import find_matches
+from genome_loader import load_genome_text, load_uploaded_genome
 
 st.set_page_config(
     page_title="GeneFlow - DNA String Matching",
@@ -33,17 +34,28 @@ def clean_dna(seq: str) -> str:
 def parse_uploaded_fasta(uploaded_file) -> str:
     if not uploaded_file:
         raise ValueError("Select a FASTA file first.")
-    if not HAS_BIO:
-        raise RuntimeError("BioPython is not installed. Run: pip install biopython")
-
+  if HAS_BIO:
+    if hasattr(uploaded_file, "seek"):
+      uploaded_file.seek(0)
     chunks: List[str] = []
     for rec in SeqIO.parse(uploaded_file, "fasta"):
-        chunks.append(clean_dna(str(rec.seq)))
-
+      chunks.append(clean_dna(str(rec.seq)))
     merged = "".join(chunks)
-    if not merged:
-        raise ValueError("No valid A/T/C/G bases found in FASTA.")
-    return merged
+    if merged:
+      return merged
+
+  # Fallback parser handles both FASTA and plain-text DNA uploads.
+  try:
+    return load_uploaded_genome(uploaded_file)
+  except Exception:
+    if hasattr(uploaded_file, "seek"):
+      uploaded_file.seek(0)
+    raw = uploaded_file.read()
+    if isinstance(raw, bytes):
+      text = raw.decode("utf-8", errors="ignore")
+    else:
+      text = str(raw)
+    return load_genome_text(text)
 
 
 def run_analysis(pattern: str, genome: str) -> Tuple[Dict[int, Dict[str, int]], int, List[int]]:

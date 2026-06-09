@@ -1,0 +1,231 @@
+\documentclass[11pt]{article}
+\usepackage[a4paper,margin=1in]{geometry}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{lmodern}
+\usepackage{hyperref}
+\usepackage{longtable}
+\usepackage{enumitem}
+\usepackage{titlesec}
+
+\title{DNA String Matcher\\Detailed Technical Stack and Architecture Report}
+\author{Project Documentation Draft}
+\date{April 14, 2026}
+
+\begin{document}
+\maketitle
+\tableofcontents
+\newpage
+
+\section{Project Overview}
+\textbf{Project Name:} DNA Pattern Matcher / GeneFlow DNA String Matcher.
+
+\textbf{Goal:} Detect DNA subsequences inside larger genome strings using a Deterministic Finite Automaton (DFA) based matcher, with both desktop and web user interfaces.
+
+\textbf{Academic Framing:}
+\begin{itemize}[leftmargin=*]
+  \item Practical application of automata theory to bioinformatics pattern search
+  \item DFA construction, transition traversal, and complexity discussion
+  \item Multi-interface software implementation (desktop + web)
+\end{itemize}
+
+\section{Technology Stack}
+\subsection{Language and Core Runtime}
+\begin{itemize}[leftmargin=*]
+  \item Python
+  \item Documented version references vary across files (3.9+, 3.10+, and 3.13 noted in docs/scripts)
+\end{itemize}
+
+\subsection{Algorithm Layer}
+\begin{itemize}[leftmargin=*]
+  \item Custom DFA transition table builder
+  \item Custom DFA-based matcher and transition tracer
+\end{itemize}
+
+\subsection{Desktop Stack}
+\begin{itemize}[leftmargin=*]
+  \item PyQt6
+  \item PyQt6-WebEngine
+  \item Matplotlib embedded in Qt
+\end{itemize}
+
+\subsection{Web Stack}
+\begin{itemize}[leftmargin=*]
+  \item Streamlit
+  \item Plotly
+  \item Pandas
+\end{itemize}
+
+\subsection{Data and Bioinformatics}
+\begin{itemize}[leftmargin=*]
+  \item BioPython (FASTA parsing via SeqIO)
+  \item Custom genome loader with DNA alphabet filtering
+\end{itemize}
+
+\subsection{AI Integration (Optional)}
+\begin{itemize}[leftmargin=*]
+  \item Hugging Face Router endpoint for chat completions
+  \item Multi-model fallback strategy
+  \item Environment and .env token resolution support
+\end{itemize}
+
+\section{Declared Dependencies}
+\begin{longtable}{|p{0.45\textwidth}|p{0.45\textwidth}|}
+\hline
+\textbf{Dependency} & \textbf{Role} \\
+\hline
+PyQt6>=6.7 & Desktop UI \\
+\hline
+PyQt6-WebEngine>=6.7 & Embedded web rendering in desktop flow \\
+\hline
+matplotlib>=3.7 & Charts and visual exports \\
+\hline
+google-generativeai>=0.3.0 & Legacy/alternate AI dependency reference \\
+\hline
+biopython>=1.83 & FASTA parsing \\
+\hline
+streamlit>=1.28 & Web UI \\
+\hline
+plotly>=5.17 & Interactive web charts \\
+\hline
+pandas>=2.0 & Tabular processing for web app \\
+\hline
+certifi>=2024.2.2 & SSL certificates for API networking \\
+\hline
+\end{longtable}
+
+\textbf{Consistency note:} Active AI code uses Hugging Face HTTP endpoints, while requirements and some docs still mention Google/Gemini related setup.
+
+\section{Architecture}
+\subsection{Layered View}
+\begin{enumerate}[leftmargin=*]
+  \item \textbf{Input Layer:} Pattern text, genome text, FASTA file, optional natural-language query.
+  \item \textbf{Processing Layer:} DFA construction, genome scan, accept-state detection, optional transition trace.
+  \item \textbf{Presentation Layer:} PyQt desktop visualization and Streamlit web visualization.
+  \item \textbf{Support Layer:} AI helper module, test scripts, verification script.
+\end{enumerate}
+
+\subsection{Entry Points}
+\begin{itemize}[leftmargin=*]
+  \item main.py: launcher menu
+  \item app\_desktop.py: desktop app start
+  \item app\_web.py: Streamlit web app
+  \item app\_streamlit.py: alternate Streamlit app
+  \item demo.py: CLI demo script (contains stale references)
+\end{itemize}
+
+\section{Repository Structure Notes}
+\begin{itemize}[leftmargin=*]
+  \item Root contains primary implementation modules.
+  \item pyqt-app/ contains a mirrored copy of much of the project.
+  \item assets/ stores UI styles.
+  \item outputs/ stores generated visual files.
+  \item web/ is present but empty.
+\end{itemize}
+
+\section{Algorithm Details}
+\subsection{DFA Construction}
+Given pattern length $m$, states are represented as $0..m$. For each state and each alphabet symbol in \{A,T,C,G\}, the transition function computes the largest prefix length matched after consuming the symbol.
+
+\subsection{Matching Procedure}
+Given genome length $n$, the matcher performs a single left-to-right scan. State updates follow the transition table. Whenever accept state $m$ is reached, a match start index is recorded.
+
+\subsection{Complexity Discussion}
+\begin{itemize}[leftmargin=*]
+  \item Scan phase: $O(n)$
+  \item Preprocessing depends on pattern and transition construction method
+  \item Project framing emphasizes linear-time DFA traversal behavior
+\end{itemize}
+
+\section{Data Validation and Handling}
+\begin{itemize}[leftmargin=*]
+  \item Pattern validation enforces alphabet \{A,T,C,G\}.
+  \item Genome input is uppercased and sanitized to valid bases.
+  \item FASTA parsing supported in web flow via BioPython and in desktop via local loader.
+  \item Primary reported matches are 1-indexed positions.
+\end{itemize}
+
+\section{UI and Visualization}
+\subsection{Desktop UI}
+\begin{itemize}[leftmargin=*]
+  \item Custom-painted DFA state graph and transitions
+  \item Timeline scanner with current index and match highlighting
+  \item Optional stepwise animation from transition traces
+  \item Embedded Matplotlib plotting
+\end{itemize}
+
+\subsection{Web UI}
+\begin{itemize}[leftmargin=*]
+  \item Streamlit interface with custom HTML/CSS sections
+  \item Plotly charts and metric displays
+  \item Session-state based analysis workflow
+\end{itemize}
+
+\section{AI Subsystem}
+\begin{itemize}[leftmargin=*]
+  \item Natural-language to DNA-pattern extraction
+  \item Friendly error handling for auth/quota/model/network issues
+  \item Model fallback list for reliability
+  \item Optional motif suggestion logic via k-mer frequency counting
+\end{itemize}
+
+\section{Testing and Verification}
+\subsection{test\_suite.py}
+Covers functional cases, overlapping matches, biological motif examples, edge conditions, and performance checks.
+
+\subsection{verify\_system.py}
+Covers runtime dependency verification, algorithm smoke tests, and project file presence checks.
+
+\subsection{Current QA Style}
+Script-based testing is present; no formal pytest-based automated CI pipeline is detected.
+
+\section{Known Inconsistencies and Technical Debt}
+\begin{enumerate}[leftmargin=*]
+  \item AI dependency/documentation mismatch (Google/Gemini mentions vs Hugging Face implementation).
+  \item demo.py contains stale imports/references (aho\_corasick, visualize, app.py).
+  \item Duplicated codebase in pyqt-app/ increases maintenance overhead.
+  \item Python minimum version statements are inconsistent across files.
+  \item Desktop plotting backend choice may need verification with PyQt6 runtime settings.
+\end{enumerate}
+
+\section{Deployment and Execution}
+\subsection{Typical Local Run}
+\begin{enumerate}[leftmargin=*]
+  \item Create/activate virtual environment
+  \item Install requirements
+  \item Run main.py and choose desktop or web mode
+\end{enumerate}
+
+\subsection{Direct Commands}
+\begin{itemize}[leftmargin=*]
+  \item Web: streamlit run app\_web.py
+  \item Desktop: python3 app\_desktop.py
+\end{itemize}
+
+\section{Presentation-Ready Structure (For PPT)}
+\begin{enumerate}[leftmargin=*]
+  \item Problem and Motivation
+  \item Automata Theory Mapping
+  \item Full Architecture
+  \item Tech Stack by Layer
+  \item DFA Logic and Complexity
+  \item Interface Demo (Desktop + Web)
+  \item AI-Assist Workflow
+  \item Testing Results
+  \item Gaps and Improvements
+  \item Roadmap
+\end{enumerate}
+
+\section{Recommended Roadmap}
+\begin{enumerate}[leftmargin=*]
+  \item Consolidate root and pyqt-app duplicates
+  \item Standardize AI provider and cleanup dependency list
+  \item Repair or deprecate stale demo paths
+  \item Introduce pytest and CI automation
+  \item Unify Python version policy
+\end{enumerate}
+
+\section{Conclusion}
+The project demonstrates a strong automata-driven DNA matching foundation with rich visualization and optional AI assistance. It is presentation-ready for academic reporting, with clear opportunities to improve maintainability and stack consistency before production-level release.
+
+\end{document}

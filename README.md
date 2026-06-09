@@ -65,6 +65,19 @@ The application will open a desktop window.
    - **Match Visualization** (right): Bar chart of match positions.
 5. **Animate**: Use Play/Pause, Step, Back, or Speed controls to trace through the DFA step-by-step.
 
+### Quick FASTA Test File
+
+Use the included sample FASTA file for a fast test:
+
+- `samples/demo_genome.fasta`
+
+Desktop app test flow:
+
+1. Enter a pattern like `TATA` or `ATG`.
+2. Click **Load FASTA**.
+3. Select `samples/demo_genome.fasta`.
+4. Click **Run** to see matches and DFA animation.
+
 ### AI Pattern Suggestion (if enabled)
 
 1. In the "AI Query" field, type a natural language description:
@@ -85,6 +98,8 @@ dna-fa-matcher/
 ├── matcher.py               # Pattern matching & tracing
 ├── genome_loader.py         # FASTA file loading
 ├── ai_insights.py           # AI pattern extraction (Anthropic)
+├── samples/
+│   └── demo_genome.fasta    # Ready-to-use FASTA test file
 ├── assets/
 │   └── style.qss            # Qt stylesheet (dark theme)
 ├── requirements.txt         # Dependencies

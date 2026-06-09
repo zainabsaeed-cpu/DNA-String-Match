@@ -30,7 +30,7 @@ QUICK TEST (No API Key Needed):
 Pattern: ATCG
 Genome:  ATCGATCGATCGATCGATCGATCGATCGATCG
 
-Result: 8 matches found ✓
+Result: 8 matches found [OK]
 
 TO USE AI FEATURE (Optional):
 =============================
@@ -64,13 +64,13 @@ Configuration:
 WHAT YOU CAN DO:
 ================
 
-✓ Enter DNA pattern (A, T, C, G)
-✓ Upload FASTA genome file
-✓ Or paste genome sequence
-✓ View DFA state diagram
-✓ See match positions highlighted
-✓ View statistics and charts
-✓ Use AI to extract patterns from text
+[OK] Enter DNA pattern (A, T, C, G)
+[OK] Upload FASTA genome file
+[OK] Or paste genome sequence
+[OK] View DFA state diagram
+[OK] See match positions highlighted
+[OK] View statistics and charts
+[OK] Use AI to extract patterns from text
 
 TECHNOLOGY STACK:
 =================
@@ -81,5 +81,5 @@ Plotly (visualizations)
 Google Gemini AI (pattern extraction)
 BioPython (FASTA support)
 
-That's it! Enjoy! 🧬
+That's it! Enjoy! [DNA ICON]
 

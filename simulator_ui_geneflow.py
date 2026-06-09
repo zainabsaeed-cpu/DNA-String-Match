@@ -14,7 +14,7 @@ from PyQt6.QtWidgets import (
     QMessageBox, QSplitter, QComboBox, QCheckBox, QScrollArea, QProgressBar,
     QFileDialog, QTabWidget, QFrame, QStyle, QSizePolicy, QGridLayout, QHeaderView
 )
-from PyQt6.QtCore import Qt, QThread, pyqtSignal, QTimer, QSize, QPointF, QRectF
+from PyQt6.QtCore import Qt, QThread, pyqtSignal, QTimer, QSize, QPointF, QRectF, QPropertyAnimation, QEasingCurve
 from PyQt6.QtGui import QBrush, QColor, QFont, QIcon, QPainter, QPen, QPixmap, QPdfWriter, QPainterPath
 import matplotlib
 matplotlib.use('Qt5Agg')
@@ -34,6 +34,7 @@ except ImportError:
 
 from dfa import get_transition_table
 from matcher import find_matches, trace_dfa
+from genome_loader import load_genome
 
 try:
     from ai_insights import AIQueryHandler
@@ -470,6 +471,7 @@ class MatchPlotWidget(QWidget):
         if HAS_MATPLOTLIB:
             self.figure = Figure(facecolor=COLORS["bg-secondary"], edgecolor="none")
             self.canvas = FigureCanvas(self.figure)
+            self.canvas.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
             self.canvas.hide()
             layout.addWidget(self.canvas)
 
@@ -488,7 +490,13 @@ class MatchPlotWidget(QWidget):
             ax.set_ylim(0, 1.6)
             ax.set_xlabel("Genome position", color=COLORS["text-primary"], fontweight="bold")
             ax.set_ylabel("Match", color=COLORS["text-primary"], fontweight="bold")
-            ax.set_title(f"Match Positions ({len(matches)} total)", color=COLORS["text-primary"], fontweight="bold")
+            ax.set_title(
+                f"Match Positions ({len(matches)} total)",
+                color=COLORS["text-primary"],
+                fontweight="bold",
+                pad=6,
+                y=0.98,
+            )
 
         ax.tick_params(colors=COLORS["text-secondary"])
         for spine in ["top", "right"]:
@@ -498,7 +506,8 @@ class MatchPlotWidget(QWidget):
 
         self._empty.hide()
         self.canvas.show()
-        self.figure.tight_layout()
+        # Reserve explicit margins so labels/title are not clipped on Qt canvas.
+        self.figure.subplots_adjust(left=0.09, right=0.99, bottom=0.20, top=0.90)
         self.canvas.draw()
 
 
@@ -572,6 +581,10 @@ class GeneFlowApp(QMainWindow):
         self._status_left = None
         self._status_center = None
         self._status_right = None
+        self._sidebar_collapsed = False
+        self._sidebar_expanded_width = 290
+        self._sidebar_animation = None
+        self.sidebar_toggle_btn = None
         self._nav_buttons = {}
         self._panel_matcher = None
         self._panel_results = None
@@ -615,6 +628,9 @@ class GeneFlowApp(QMainWindow):
         self.sidebar_widget = self.create_sidebar()
         workbench_layout.addWidget(self.sidebar_widget)
 
+        center_right_split = QSplitter(Qt.Orientation.Horizontal)
+        center_right_split.setChildrenCollapsible(False)
+
         center_stack = QWidget()
         center_layout = QVBoxLayout(center_stack)
         center_layout.setContentsMargins(0, 0, 0, 0)
@@ -628,10 +644,14 @@ class GeneFlowApp(QMainWindow):
         self.center_scroll.setVerticalScrollBarPolicy(Qt.ScrollBarPolicy.ScrollBarAsNeeded)
         self.center_scroll.setWidget(self.create_center_content())
         center_layout.addWidget(self.center_scroll, 1)
-        workbench_layout.addWidget(center_stack, 1)
+        center_right_split.addWidget(center_stack)
 
         self._right_tabs = self.create_right_tabs()
-        workbench_layout.addWidget(self._right_tabs)
+        center_right_split.addWidget(self._right_tabs)
+        center_right_split.setStretchFactor(0, 3)
+        center_right_split.setStretchFactor(1, 2)
+        center_right_split.setSizes([960, 620])
+        workbench_layout.addWidget(center_right_split, 1)
 
         self._wire_sidebar_navigation()
 
@@ -673,18 +693,21 @@ class GeneFlowApp(QMainWindow):
         mapping = {
             "matcher": QStyle.StandardPixmap.SP_FileDialogContentsView,
             "diagram": QStyle.StandardPixmap.SP_ArrowRight,
-            "results": QStyle.StandardPixmap.SP_DialogApplyButton,
+            "results": QStyle.StandardPixmap.SP_FileDialogListView,
             "data": QStyle.StandardPixmap.SP_DirIcon,
             "export": QStyle.StandardPixmap.SP_DialogSaveButton,
             "history": QStyle.StandardPixmap.SP_FileDialogDetailedView,
-            "config": QStyle.StandardPixmap.SP_FileDialogInfoView,
+            "config": QStyle.StandardPixmap.SP_BrowserReload,
             "ai": QStyle.StandardPixmap.SP_MessageBoxInformation,
         }
         return style.standardIcon(mapping.get(kind, QStyle.StandardPixmap.SP_FileIcon))
 
     def create_sidebar(self):
         sidebar = QWidget()
-        sidebar.setFixedWidth(290)
+        sidebar.setMinimumWidth(0)
+        sidebar.setMaximumWidth(self._sidebar_expanded_width)
+        sidebar.resize(self._sidebar_expanded_width, sidebar.height())
+        sidebar.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Expanding)
         sidebar.setStyleSheet(f"background: {COLORS['bg-elevated']}; border-right: 1px solid {COLORS['border']};")
         layout = QVBoxLayout(sidebar)
         layout.setContentsMargins(0, 18, 0, 18)
@@ -714,15 +737,6 @@ class GeneFlowApp(QMainWindow):
         self._nav_buttons["history"] = self._make_nav_button("History", "history")
         for btn in (self._nav_buttons["data"], self._nav_buttons["export"], self._nav_buttons["history"]):
             layout.addWidget(btn)
-
-        line2 = QWidget()
-        line2.setFixedHeight(1)
-        line2.setStyleSheet(f"background: {COLORS['border']}; margin: 10px 24px;")
-        layout.addWidget(line2)
-
-        add_section("System")
-        self._nav_buttons["config"] = self._make_nav_button("Toggle Theme", "config")
-        layout.addWidget(self._nav_buttons["config"])
 
         layout.addStretch()
 
@@ -798,6 +812,25 @@ class GeneFlowApp(QMainWindow):
             self._right_tabs.setCurrentIndex(1)
         elif key in {"history", "config"}:
             self._right_tabs.setCurrentIndex(2)
+
+    def toggle_sidebar(self):
+        """Slide the left navigation sidebar in/out to free dashboard space."""
+        if self.sidebar_widget is None:
+            return
+
+        self._sidebar_collapsed = not self._sidebar_collapsed
+        target = 0 if self._sidebar_collapsed else self._sidebar_expanded_width
+
+        anim = QPropertyAnimation(self.sidebar_widget, b"maximumWidth", self)
+        anim.setDuration(220)
+        anim.setStartValue(self.sidebar_widget.maximumWidth())
+        anim.setEndValue(target)
+        anim.setEasingCurve(QEasingCurve.Type.InOutCubic)
+        anim.start()
+        self._sidebar_animation = anim
+
+        if self.sidebar_toggle_btn is not None:
+            self.sidebar_toggle_btn.setText("Show Menu" if self._sidebar_collapsed else "Hide Menu")
 
     def _focus_section_for_key(self, key: str):
         target = None
@@ -904,6 +937,13 @@ class GeneFlowApp(QMainWindow):
         layout.setContentsMargins(16, 0, 16, 0)
         layout.setSpacing(10)
 
+        self.sidebar_toggle_btn = QPushButton("Hide Menu")
+        self.sidebar_toggle_btn.setMinimumWidth(110)
+        self.sidebar_toggle_btn.setFixedHeight(32)
+        self.sidebar_toggle_btn.clicked.connect(self.toggle_sidebar)
+        self.sidebar_toggle_btn.setStyleSheet(self._secondary_button_style())
+        layout.addWidget(self.sidebar_toggle_btn)
+
         self.pattern_input = QLineEdit()
         self.pattern_input.setPlaceholderText("ATCG")
         self.pattern_input.setMinimumWidth(130)
@@ -936,19 +976,12 @@ class GeneFlowApp(QMainWindow):
         self.export_quick_btn.setFixedSize(32, 32)
         self.export_quick_btn.clicked.connect(self.export_results)
 
-        self.config_quick_btn = QPushButton()
-        self.config_quick_btn.setText(f"Theme: {self._theme_mode.title()}")
-        self.config_quick_btn.setMinimumWidth(110)
-        self.config_quick_btn.setFixedHeight(32)
-        self.config_quick_btn.clicked.connect(self.toggle_theme)
-
         self.pattern_input.setStyleSheet(self._field_style(120))
         self.genome_source_input.setStyleSheet(self._field_style(220))
         self.load_btn.setStyleSheet(self._secondary_button_style())
         self.clear_btn.setStyleSheet(self._ghost_button_style())
         self.run_btn.setStyleSheet(self._primary_button_style())
         self.export_quick_btn.setStyleSheet(self._icon_button_style())
-        self.config_quick_btn.setStyleSheet(self._secondary_button_style())
 
         group1 = QWidget()
         g1 = QHBoxLayout(group1)
@@ -988,7 +1021,6 @@ class GeneFlowApp(QMainWindow):
         layout.addWidget(self.run_btn)
         layout.addWidget(self.clear_btn)
         layout.addWidget(self.export_quick_btn)
-        layout.addWidget(self.config_quick_btn)
         return bar
 
     def _field_style(self, width):
@@ -1134,14 +1166,14 @@ class GeneFlowApp(QMainWindow):
         g_layout.addLayout(header)
 
         self._match_plot_widget = MatchPlotWidget()
-        self._match_plot_widget.setMinimumHeight(150)
-        g_layout.addWidget(self._match_plot_widget)
+        self._match_plot_widget.setMinimumHeight(260)
+        g_layout.addWidget(self._match_plot_widget, 2)
 
         self.genome_display = QTextEdit()
         self.genome_display.setReadOnly(True)
         self.genome_display.setMinimumHeight(120)
         self.genome_display.setStyleSheet(f"background: {COLORS['card']}; border: 1px solid {COLORS['border-card']}; border-radius: 8px; color: {COLORS['text-secondary']}; padding: 12px; font-family: '{FONTS['mono']}'; font-size: 13px;")
-        g_layout.addWidget(self.genome_display)
+        g_layout.addWidget(self.genome_display, 1)
 
         progress_row = QWidget()
         p_layout = QVBoxLayout(progress_row)
@@ -1222,8 +1254,8 @@ class GeneFlowApp(QMainWindow):
 
     def create_right_tabs(self):
         tabs = QTabWidget()
-        tabs.setMinimumWidth(400)
-        tabs.setMaximumWidth(470)
+        tabs.setMinimumWidth(480)
+        tabs.setMaximumWidth(760)
         tabs.setDocumentMode(True)
         tabs.setStyleSheet(f"""
             QTabWidget::pane {{
@@ -1323,7 +1355,7 @@ class GeneFlowApp(QMainWindow):
         layout.setSpacing(10)
 
         self._state_diagram = FADiagramWidget()
-        self._state_diagram.setMinimumHeight(320)
+        self._state_diagram.setMinimumHeight(420)
         layout.addWidget(self._state_diagram)
 
         self._state_meta = QLabel("Live State: q0")
@@ -1563,7 +1595,7 @@ class GeneFlowApp(QMainWindow):
         header.setSpacing(32)
         
         # Logo + Branding
-        logo_label = QLabel("🧬")
+        logo_label = QLabel("[DNA]")
         logo_label.setFont(QFont(FONTS["sans"], 20, QFont.Weight.Bold))
         header.addWidget(logo_label)
         
@@ -1745,9 +1777,9 @@ class GeneFlowApp(QMainWindow):
         self._panel_dfa = self.create_dfa_tab()
         bottom_row.addWidget(self._panel_results)
         bottom_row.addWidget(self._panel_dfa)
-        bottom_row.setSizes([760, 500])
-        bottom_row.setStretchFactor(0, 3)
-        bottom_row.setStretchFactor(1, 2)
+        bottom_row.setSizes([640, 620])
+        bottom_row.setStretchFactor(0, 2)
+        bottom_row.setStretchFactor(1, 3)
 
         vertical_split.addWidget(top_row)
         vertical_split.addWidget(bottom_row)
@@ -2052,14 +2084,14 @@ class GeneFlowApp(QMainWindow):
         self.run_btn.setStyleSheet(self._primary_button_style())
         btn_layout.addWidget(self.run_btn)
         
-        self.load_btn = QPushButton("📂 Load FASTA")
+        self.load_btn = QPushButton("[FILE] Load FASTA")
         self.load_btn.setFont(QFont("Arial", 11, QFont.Weight.Bold))
         self.load_btn.setMinimumHeight(44)
         self.load_btn.clicked.connect(self.load_fasta)
         self.load_btn.setStyleSheet(self._secondary_button_style())
         btn_layout.addWidget(self.load_btn)
         
-        self.clear_btn = QPushButton("🔄 Clear")
+        self.clear_btn = QPushButton("[RESET] Clear")
         self.clear_btn.setFont(QFont("Arial", 11, QFont.Weight.Bold))
         self.clear_btn.setMinimumHeight(44)
         self.clear_btn.clicked.connect(self.clear_all)
@@ -2705,23 +2737,27 @@ class GeneFlowApp(QMainWindow):
     
     def load_fasta(self):
         """Load FASTA file"""
-        if not HAS_BIO:
-            print("BioPython not installed")
-            return
-        
         from PyQt6.QtWidgets import QFileDialog
         filename, _ = QFileDialog.getOpenFileName(self, "Load FASTA", "", "FASTA Files (*.fasta *.fa)")
         
         if filename:
             try:
-                seqs = []
-                for record in SeqIO.parse(filename, "fasta"):
-                    seqs.append(str(record.seq).upper())
-                self.genome_input.setText("".join(seqs))
+                if HAS_BIO:
+                    seqs = []
+                    for record in SeqIO.parse(filename, "fasta"):
+                        seqs.append(str(record.seq).upper())
+                    genome = "".join(seqs)
+                    genome = "".join(ch for ch in genome if ch in {"A", "T", "C", "G"})
+                    if not genome:
+                        raise ValueError("No valid DNA sequence found in file (expected A/T/C/G).")
+                else:
+                    genome = load_genome(filename)
+
+                self.genome_input.setText(genome)
                 if hasattr(self, "genome_source_input"):
                     self.genome_source_input.setText(Path(filename).name)
             except Exception as e:
-                print(f"Error loading FASTA: {e}")
+                QMessageBox.critical(self, "FASTA Error", str(e))
 
     def load_example_genome(self):
         name = self.example_selector.currentText() if hasattr(self, "example_selector") else ""

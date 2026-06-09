@@ -20,6 +20,7 @@ except ImportError:
 
 from dfa import get_transition_table, ALPHABET
 from matcher import find_matches, trace_dfa
+from genome_loader import load_uploaded_genome
 
 # ─────────────────────────────────────────────────────────────────
 # PAGE CONFIG
@@ -431,12 +432,21 @@ with tab1:
     else:
         uploaded = st.file_uploader("Upload FASTA file", type=["fasta", "fa", "faa"])
         if uploaded:
-            if HAS_BIO:
-                records = list(SeqIO.parse(uploaded, "fasta"))
-                genome = str(records[0].seq).upper()
+            try:
+                if HAS_BIO:
+                    if hasattr(uploaded, "seek"):
+                        uploaded.seek(0)
+                    records = list(SeqIO.parse(uploaded, "fasta"))
+                    pieces = ["".join(ch for ch in str(rec.seq).upper() if ch in "ATCG") for rec in records]
+                    genome = "".join(pieces)
+                    if not genome:
+                        raise ValueError("No valid A/T/C/G bases found in FASTA")
+                else:
+                    genome = load_uploaded_genome(uploaded)
+
                 st.session_state.genome = genome
-            else:
-                st.warning("BioPython not installed. Install with: `pip install biopython`")
+            except Exception as exc:
+                st.error(f"FASTA load error: {exc}")
                 genome = st.session_state.genome
         else:
             genome = st.session_state.genome
